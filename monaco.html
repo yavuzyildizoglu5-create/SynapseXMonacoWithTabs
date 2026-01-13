@@ -1,0 +1,532 @@
+<!DOCTYPE html> 
+<html lang="lua">
+<head>
+    <meta charset="UTF-8" />
+    <title>Synapse X Tabs with Save</title>
+    <script src="ace/ace.js"></script>
+    <script src="ace/ext-language_tools.js"></script>
+    <script src="ace/theme/tomorrow_night_eighties.js"></script>
+    <script src="ace/theme/TransparentEditor.js"></script>
+    <style>
+        .ace_autocomplete {
+            background-color: rgb(50, 50, 50) !important;
+            border: 1px solid rgb(80, 80, 80) !important;
+            color: white !important;
+            font-family: monospace;
+        }
+
+            .ace_autocomplete .ace_selected {
+                background-color: rgb(100, 100, 100) !important;
+                color: white !important;
+            }
+
+            .ace_autocomplete .ace_completion {
+                color: rgb(220, 220, 220) !important;
+            }
+
+            .ace_autocomplete .ace_rightAligned {
+                color: rgb(180, 180, 180) !important;
+                padding-left: 10px;
+                font-style: italic;
+            }
+
+            .ace_autocomplete .ace_scrollbar {
+                background-color: rgb(40, 40, 40);
+            }
+
+            .ace_autocomplete .ace_scrollbar-inner {
+                background-color: rgb(80, 80, 80);
+            }
+
+            .ace_autocomplete::-webkit-scrollbar {
+                width: 10px;
+                background-color: #333;
+            }
+
+            .ace_autocomplete::-webkit-scrollbar-thumb {
+                background-color: #666;
+            }
+
+/* ===== Webkit 瀏覽器專用 ===== */
+::-webkit-scrollbar {
+    width: 17px;
+    height: 17px;
+}
+
+/* 滾動槽 */
+::-webkit-scrollbar-track {
+    background-color: #f0f0f0;
+    border: 0px solid #ccc;
+    box-shadow: inset 0 0 1px rgba(0,0,0,0.2);
+}
+
+/* 滑塊 */
+::-webkit-scrollbar-thumb {
+    background-color: #c0c0c0;
+    border-radius: 0;
+    border: 2px solid #f0f0f0; /* 模擬立體邊框 */
+}
+
+/* 滑塊 hover / active */
+::-webkit-scrollbar-thumb:hover { background-color: #a0a0a0; }
+::-webkit-scrollbar-thumb:active { background-color: #808080; }
+
+/* 滾動按鈕 */
+::-webkit-scrollbar-button {
+    background-color: #f0f0f0;
+    border: 0;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+/* 上箭頭 - 10px */
+::-webkit-scrollbar-button:single-button:vertical:decrement {
+    background-image: url("data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><polygon points='5,2 8,8 2,8' fill='%23555'/></svg>");
+}
+
+/* 下箭頭 - 10px */
+::-webkit-scrollbar-button:single-button:vertical:increment {
+    background-image: url("data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><polygon points='2,2 8,2 5,8' fill='%23555'/></svg>");
+}
+
+/* 左箭頭 - 10px */
+::-webkit-scrollbar-button:single-button:horizontal:decrement {
+    background-image: url("data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><polygon points='2,5 8,2 8,8' fill='%23555'/></svg>");
+}
+
+/* 右箭頭 - 10px */
+::-webkit-scrollbar-button:single-button:horizontal:increment {
+    background-image: url("data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><polygon points='2,2 8,5 2,8' fill='%23555'/></svg>");
+}
+
+
+        body {
+            margin: 0;
+            background-color: transparent !important;
+            color: white;
+            font-family: monospace;
+        }
+
+        .tab-bar {
+            display: flex;
+            background-color: transparent;
+            height: 19px;
+            align-items: center;
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            scrollbar-width: thin;
+        }
+
+            .tab-bar::-webkit-scrollbar {
+                height: 6px;
+            }
+
+            .tab-bar::-webkit-scrollbar-thumb {
+                background-color: #555;
+                border-radius: 3px;
+            }
+
+        .tab {
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background-color: #787878;
+            color: #fff;
+            margin-right: 0px;
+            font-size: 12px;
+            padding: 0 8px;
+            height: 30px;
+            white-space: nowrap;
+        }
+
+
+            .tab.active {
+                background-color: #646464;
+            }
+
+        .close-btn {
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            margin-left: 6px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        #add-tab {
+            margin-left: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            background-color: #646464;
+            color: white;
+            height: 14px;
+            width: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #888;
+            border-radius: 0px;
+            padding: 0;
+        }
+
+
+        .editor-container {
+            position: absolute;
+            top: 19px;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+
+        .editor {
+            position: absolute;
+            top: 0px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+        }
+
+            .editor.active {
+                display: block;
+            }
+    </style>
+</head>
+<body>
+
+    <div class="tab-bar" id="tabBar">
+        <div id="add-tab">＋</div>
+    </div>
+
+    <div class="editor-container" id="editorContainer"></div>
+
+<script>
+    const tabBar = document.getElementById("tabBar");
+    const editorContainer = document.getElementById("editorContainer");
+    const addTabBtn = document.getElementById("add-tab");
+    const editors = {};
+    let activeTabId = null;
+
+    // 產生唯一 tab ID
+    function generateTabId() {
+        return "tab_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+    }
+
+// 根據所有已存在的 tab 名稱決定下一個 Script 編號
+function getNextScriptNumberByAllTabs() {
+    const tabs = document.querySelectorAll(".tab span");
+    let maxNumber = 0;
+
+    tabs.forEach(span => {
+        const text = span.textContent;
+        const match = text.match(/^Script (\d+)$/);
+        if (match) {
+            const num = parseInt(match[1]);
+            if (num > maxNumber) maxNumber = num;
+        }
+    });
+
+    return maxNumber + 1; // 找到最大 Script N，再加 1
+}
+
+
+    function saveTabsToStorage() {
+        const tabs = [];
+        for (const tabId in editors) {
+            const tabElem = document.querySelector(`.tab[data-id="${tabId}"]`);
+            const label = tabElem?.querySelector("span")?.textContent || tabId;
+            tabs.push({
+                id: tabId,
+                name: label,
+                content: editors[tabId].getValue()
+            });
+        }
+        localStorage.setItem("savedTabs", JSON.stringify(tabs));
+        localStorage.setItem("activeTabId", activeTabId);
+    }
+
+    function updateUIState() {
+        const tabs = document.querySelectorAll(".tab");
+        const tabTotal = tabs.length;
+        addTabBtn.style.display = tabTotal >= 30 ? "none" : "flex";
+        tabs.forEach(tab => {
+            const closeBtn = tab.querySelector(".close-btn");
+            closeBtn.style.display = tabTotal <= 0 ? "none" : "inline";
+        });
+    }
+
+    function createTab(name = null, content = '') {
+        const tabId = generateTabId();
+
+        // 自動 Script 編號
+        const number = name ? null : getNextScriptNumberByAllTabs();
+
+        const tab = document.createElement("div");
+        tab.className = "tab";
+        tab.dataset.id = tabId;
+
+        const label = document.createElement("span");
+        label.textContent = name || "Script " + number;
+        tab.appendChild(label);
+
+        // 雙擊改名
+        label.ondblclick = () => {
+            const oldName = label.textContent;
+            const input = document.createElement("input");
+            input.type = "text";
+            input.value = oldName;
+            input.style.width = "80px";
+            input.style.fontSize = "12px";
+            input.style.border = "none";
+            input.style.outline = "none";
+            input.style.background = "#444";
+            input.style.color = "#fff";
+            tab.replaceChild(input, label);
+            input.focus();
+
+            input.onblur = () => {
+                label.textContent = input.value.trim() || oldName;
+                tab.replaceChild(label, input);
+                saveTabsToStorage();
+            };
+
+            input.onkeydown = (e) => {
+                if (e.key === "Enter") input.blur();
+            };
+        };
+
+        // 關閉 tab
+        const closeBtn = document.createElement("span");
+        closeBtn.className = "close-btn";
+        closeBtn.textContent = "×";
+        closeBtn.onclick = (e) => {
+            e.stopPropagation();
+            reallyCloseTab(tabId);
+        };
+        tab.appendChild(closeBtn);
+
+        // 點擊切換 tab
+        tab.onclick = () => activateTab(tabId);
+
+        tabBar.insertBefore(tab, addTabBtn);
+
+        // 建立 editor
+        const editorDiv = document.createElement("div");
+        editorDiv.id = tabId;
+        editorDiv.className = "editor";
+        editorContainer.appendChild(editorDiv);
+
+        const editor = ace.edit(tabId, {
+            mode: "ace/mode/lua",
+            theme: "ace/theme/transparent_editor",
+            showPrintMargin: false,
+            wrap: false
+        });
+        editor.setOptions({
+            enableBasicAutocompletion: true,
+            enableLiveAutocompletion: true,
+        });
+        editor.setValue(content !== undefined ? content : '', -1);
+        editor.getSession().on('change', saveTabsToStorage);
+        editors[tabId] = editor;
+
+        // 確保 editor 初始可見
+        setTimeout(() => editor.resize(), 0);
+
+        activateTab(tabId);
+        updateUIState();
+        saveTabsToStorage();
+
+        // 通知 C# WebView2
+        if (window.chrome && window.chrome.webview) {
+            window.chrome.webview.postMessage(JSON.stringify({
+                action: "tabCreated",
+                tabId: tabId
+            }));
+        }
+    }
+
+    function activateTab(tabId) {
+        activeTabId = tabId;
+        document.querySelectorAll(".tab").forEach(tab => {
+            tab.classList.toggle("active", tab.dataset.id === tabId);
+        });
+        document.querySelectorAll(".editor").forEach(editor => {
+            editor.classList.toggle("active", editor.id === tabId);
+        });
+
+        if (activeTabId && editors[activeTabId]) editors[activeTabId].resize();
+        saveTabsToStorage();
+    }
+
+    function reallyCloseTab(tabId) {
+        const tab = document.querySelector(`.tab[data-id="${tabId}"]`);
+        if (tab) tab.remove();
+
+        const editor = document.getElementById(tabId);
+        if (editor) editor.remove();
+
+        delete editors[tabId];
+
+        if (activeTabId === tabId) {
+            const otherTab = Object.keys(editors)[0];
+            if (otherTab) activateTab(otherTab);
+            else activeTabId = null;
+        }
+
+        updateUIState();
+        saveTabsToStorage();
+    }
+
+    // 新增 tab，並直接設定名稱與內容
+function createTabWithNameAndContent(fileName, content) {
+    // 先檢查是否已存在相同名稱 tab
+    const existingTab = Array.from(document.querySelectorAll(".tab span"))
+        .find(span => span.textContent === fileName);
+    if (existingTab) {
+        // Tab 已存在，直接切換
+        const tabDiv = existingTab.parentElement;
+        activateTab(tabDiv.dataset.id);
+        if (content !== undefined && editors[tabDiv.dataset.id]) {
+            editors[tabDiv.dataset.id].setValue(content, -1);
+        }
+        return;
+    }
+
+    // 建立 tab，使用檔名當名稱
+    createTab(fileName, content);
+}
+
+
+    addTabBtn.onclick = () => createTab();
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const savedTabs = JSON.parse(localStorage.getItem("savedTabs") || "[]");
+        const savedActiveTabId = localStorage.getItem("activeTabId");
+
+        if (savedTabs.length > 0) {
+            savedTabs.forEach(tab => createTab(tab.name, tab.content));
+            if (savedActiveTabId && editors[savedActiveTabId]) {
+                activateTab(savedActiveTabId);
+            } else {
+                const firstTabId = Object.keys(editors)[0];
+                if (firstTabId) activateTab(firstTabId);
+            }
+        } else {
+            createTab();
+        }
+
+        // 延遲 resize 確保第一個 tab editor 正常顯示
+        setTimeout(() => {
+            if (activeTabId && editors[activeTabId]) editors[activeTabId].resize();
+        }, 0);
+
+        updateUIState();
+    });
+
+    // 外部操作 editor
+    window.clearEditorContent = () => {
+        if (activeTabId && editors[activeTabId]) {
+            editors[activeTabId].setValue("", -1);
+            saveTabsToStorage();
+        }
+    };
+    window.setEditorContent = text => {
+        if (activeTabId && editors[activeTabId]) {
+            editors[activeTabId].setValue(text, -1);
+            saveTabsToStorage();
+        }
+    };
+    window.getEditorContent = () => activeTabId ? editors[activeTabId].getValue() : "";
+
+    window.setEditorTheme = function (themeName, allTabs = false) {
+        if (allTabs) {
+            for (const id in editors) {
+                if (editors[id].getTheme() !== `ace/theme/${themeName}`)
+                    editors[id].setTheme(`ace/theme/${themeName}`);
+            }
+        } else if (activeTabId && editors[activeTabId]) {
+            if (editors[activeTabId].getTheme() !== `ace/theme/${themeName}`)
+                editors[activeTabId].setTheme(`ace/theme/${themeName}`);
+        }
+    };
+</script>
+
+    <script>
+        define("ace/theme/transparent_editor", ["require", "exports", "module", "ace/lib/dom"], function (require, exports, module) {
+            exports.isDark = true;
+            exports.cssClass = "ace-transparent_editor";
+            exports.cssText = "body {\
+                    background-color: transparent !important;\
+                    background-image: none !important;\
+                    margin: 0;\
+                    padding: 0;\
+                    height: 100vh;\
+                    overflow: hidden;\
+                }\
+                .ace-transparent-editor {\
+                    background-color: transparent !important;\
+                    color: #CCCCCC;\
+                }\
+                .ace-transparent-editor .ace_marker-layer .ace_active-line {\
+                    background: rgba(255, 255, 255, 0.2) !important;\
+                }\
+                .ace-transparent-editor .ace_gutter-active-line {\
+                    background-color: rgba(57, 57, 57, 0.5);\
+                }\
+                .ace-transparent-editor .ace_keyword,\
+                .ace-transparent-editor .ace_storage,\
+                .ace-transparent-editor .ace_storage.ace_type,\
+                .ace-transparent-editor .ace_support.ace_type {\
+                    color: #CC99CC;\
+                }\
+                .ace-transparent-editor .ace_comment {\
+                    color: #999999;\
+                }\
+                .ace-transparent-editor .ace_string {\
+                    color: #99CC99;\
+                }\
+                .ace-transparent-editor .ace_variable {\
+                    color: #F99157;\
+                }\
+                .ace-transparent-editor .ace_constant {\
+                    color: #F99157;\
+                }\
+                .ace-transparent-editor .ace_operator {\
+                    color: #66CCCC;\
+                }\
+                .ace-transparent-editor .ace_entity.ace_name.ace_function {\
+                    color: #6699CC;\
+                }\
+                ";
+
+            var dom = require("../lib/dom");
+            dom.importCssString(exports.cssText, exports.cssClass);
+        });
+    </script>
+
+<script src="theme-tomorrow_night_eighties.js"></script>
+
+<script>
+        // Sayfa yüklenince tüm editörleri Eighties temasına çeviren o tek satırlık büyü
+        document.addEventListener("DOMContentLoaded", () => {
+            setTimeout(() => {
+                window.setEditorTheme('tomorrow_night_eighties', true);
+            }, 100);
+        });
+    </script>
+
+const editor = ace.edit(tabId, {
+    mode: "ace/mode/lua",
+    theme: "ace/theme/tomorrow_night_eighties", // İŞTE BURASI!
+    showPrintMargin: false,
+    wrap: false
+});
+
+</body>
+</html>
+
+</body>
+</html>
